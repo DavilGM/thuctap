@@ -40,7 +40,7 @@ interface DataTableProps {
 export function DataTable({ columns, data }: DataTableProps) {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([
-        { id: 'hoten', value: '' }  // Set default filter for name
+        { id: 'hoten', value: '' }
     ]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
         nghenghiep: false,
@@ -75,7 +75,7 @@ export function DataTable({ columns, data }: DataTableProps) {
 
     const handleAddPatient = (newPatient: Datatable) => {
         setTableData((prev) => [...prev, newPatient]);
-        setIsFormOpen(false); // Close the form after adding a patient
+        setIsFormOpen(false);
     };
 
     const handleAddTestInfo = (info: { loaimau: string; thetich: string }) => {
@@ -85,18 +85,16 @@ export function DataTable({ columns, data }: DataTableProps) {
                     patient.id === selectedPatient.id ? { ...patient, ...info } : patient
                 )
             );
-            setSelectedPatient(null); // Clear selected patient
-            setRowSelection({}); // Clear row selection
+            setSelectedPatient(null);
+            setRowSelection({});
         }
         setIsFormOpen(false);
     };
 
-    // Handle input change to filter data
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         setSearchValue(value);
 
-        // Update filter value
         setColumnFilters((oldFilters) => [
             ...oldFilters.filter((filter) => filter.id !== 'hoten'),
             { id: 'hoten', value }
@@ -106,7 +104,7 @@ export function DataTable({ columns, data }: DataTableProps) {
     const handleFilterChange = (filters: any) => {
         const newFilters: ColumnFiltersState = [
             { id: "mabenhnhan", value: filters.patientCode },
-            { id: "hoten", value: filters.name || "" }, // Tìm kiếm theo tên
+            { id: "hoten", value: filters.name || "" },
             { id: "email", value: filters.email },
             { id: "namsinh", value: filters.birthYear },
             { id: "gioitinh", value: filters.gender },

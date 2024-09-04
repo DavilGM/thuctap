@@ -29,7 +29,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import AddTestInfoForm from "@/components/AddTestInfoForm";
+import CreateSessionForm from "@/components/CreateSessionForm";
 import { Datatable } from "./columns";
 
 interface DataTableProps {
@@ -40,7 +40,7 @@ interface DataTableProps {
 export function DataTable({ columns, data }: DataTableProps) {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([
-        { id: 'hoten', value: '' }  // Set default filter for name
+        { id: 'hoten', value: '' }
     ]);
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
         nghenghiep: false,
@@ -48,9 +48,9 @@ export function DataTable({ columns, data }: DataTableProps) {
         diachi: false,
     });
     const [rowSelection, setRowSelection] = useState({});
-    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [isSessionFormOpen, setIsSessionFormOpen] = useState(false);
     const [isSearchOptionsVisible, setIsSearchOptionsVisible] = useState(false);
-    const [selectedPatient, setSelectedPatient] = useState<Datatable | null>(null);
+    const [selectedPatients, setSelectedPatients] = useState<Datatable[]>([]);
     const [tableData, setTableData] = useState<Datatable[]>(data);
     const [searchValue, setSearchValue] = useState('');
 
@@ -73,30 +73,16 @@ export function DataTable({ columns, data }: DataTableProps) {
         },
     });
 
-    const handleAddPatient = (newPatient: Datatable) => {
-        setTableData((prev) => [...prev, newPatient]);
-        setIsFormOpen(false); // Close the form after adding a patient
+    const handleCreateSession = (sessionData: any) => {
+        console.log("Session created with data:", sessionData);
+        setIsSessionFormOpen(false);
+        setSelectedPatients([]);
     };
 
-    const handleAddTestInfo = (info: { loaimau: string; thetich: string }) => {
-        if (selectedPatient) {
-            setTableData((prev) =>
-                prev.map((patient) =>
-                    patient.id === selectedPatient.id ? { ...patient, ...info } : patient
-                )
-            );
-            setSelectedPatient(null); // Clear selected patient
-            setRowSelection({}); // Clear row selection
-        }
-        setIsFormOpen(false);
-    };
-
-    // Handle input change to filter data
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         setSearchValue(value);
 
-        // Update filter value
         setColumnFilters((oldFilters) => [
             ...oldFilters.filter((filter) => filter.id !== 'hoten'),
             { id: 'hoten', value }
@@ -106,7 +92,7 @@ export function DataTable({ columns, data }: DataTableProps) {
     const handleFilterChange = (filters: any) => {
         const newFilters: ColumnFiltersState = [
             { id: "mabenhnhan", value: filters.patientCode },
-            { id: "hoten", value: filters.name || "" }, // Tìm kiếm theo tên
+            { id: "hoten", value: filters.name || "" },
             { id: "email", value: filters.email },
             { id: "namsinh", value: filters.birthYear },
             { id: "gioitinh", value: filters.gender },
@@ -122,15 +108,15 @@ export function DataTable({ columns, data }: DataTableProps) {
 
     return (
         <div className="relative">
-            {isFormOpen && selectedPatient && (
+            {isSessionFormOpen && selectedPatients.length > 0 && (
                 <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-20">
                     <div className="bg-white p-4 rounded-md shadow-md max-w-lg mx-4 w-full">
-                        <AddTestInfoForm
-                            patient={selectedPatient}
-                            onAddTestInfo={handleAddTestInfo}
+                        <CreateSessionForm
+                            selectedPatients={selectedPatients}
+                            onSubmit={handleCreateSession}
                             onClose={() => {
-                                setIsFormOpen(false);
-                                setSelectedPatient(null);
+                                setIsSessionFormOpen(false);
+                                setSelectedPatients([]);
                             }}
                         />
                     </div>
@@ -168,19 +154,18 @@ export function DataTable({ columns, data }: DataTableProps) {
                         {table.getFilteredRowModel().rows.length} hàng đã chọn.
                     </div>
                     <div className="flex items-center justify-end space-x-2 py-4 mr-8">
-                        <Button className="bg-gray-600">Gửi</Button>
                         <Button
                             variant="ghost"
                             onClick={() => {
-                                const selected = table.getFilteredSelectedRowModel().rows[0]?.original;
-                                if (selected) {
-                                    setSelectedPatient(selected);
-                                    setIsFormOpen(true);
+                                const selected = table.getFilteredSelectedRowModel().rows.map(row => row.original);
+                                if (selected.length > 0) {
+                                    setSelectedPatients(selected);
+                                    setIsSessionFormOpen(true);
                                 }
                             }}
                             className="bg-gray-600 text-white"
                         >
-                            Thêm thông tin XN
+                            Tạo phiên
                         </Button>
                     </div>
                     <DropdownMenu>

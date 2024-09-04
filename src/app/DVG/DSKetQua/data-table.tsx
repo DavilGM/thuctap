@@ -1,5 +1,6 @@
-"use client";
-import React, { useState, useEffect } from "react";
+'use client'
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
     ColumnDef,
     flexRender,
@@ -12,18 +13,24 @@ import {
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import AddPatientForm from "../../../components/AddPatientForm";
-import { Datatable, columns } from "./columns";
-import { SearchOptionsForm } from "../../../components/SearchOptionsForm";
+import { Input } from "@/components/ui/input";
+import { SearchOptionsForm } from "@/components/SearchOptionsForm";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import AddTestInfoForm from "@/components/AddTestInfoForm";
+import { Datatable } from "./columns";
 
 interface DataTableProps {
     columns: ColumnDef<Datatable>[];
@@ -33,12 +40,19 @@ interface DataTableProps {
 export function DataTable({ columns, data }: DataTableProps) {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([
+        { id: 'hoten', value: '' }
     ]);
-    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+    const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+        nghenghiep: false,
+        cccd: false,
+        diachi: false,
+    });
     const [rowSelection, setRowSelection] = useState({});
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isSearchOptionsVisible, setIsSearchOptionsVisible] = useState(false);
+    const [selectedPatient, setSelectedPatient] = useState<Datatable | null>(null);
     const [tableData, setTableData] = useState<Datatable[]>(data);
+    const [searchValue, setSearchValue] = useState('');
 
     const table = useReactTable({
         data: tableData,
@@ -64,6 +78,29 @@ export function DataTable({ columns, data }: DataTableProps) {
         setIsFormOpen(false);
     };
 
+    const handleAddTestInfo = (info: { loaimau: string; thetich: string }) => {
+        if (selectedPatient) {
+            setTableData((prev) =>
+                prev.map((patient) =>
+                    patient.id === selectedPatient.id ? { ...patient, ...info } : patient
+                )
+            );
+            setSelectedPatient(null);
+            setRowSelection({});
+        }
+        setIsFormOpen(false);
+    };
+
+    const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        setSearchValue(value);
+
+        setColumnFilters((oldFilters) => [
+            ...oldFilters.filter((filter) => filter.id !== 'hoten'),
+            { id: 'hoten', value }
+        ]);
+    };
+
     const handleFilterChange = (filters: any) => {
         const newFilters: ColumnFiltersState = [
             { id: "mabenhnhan", value: filters.patientCode },
@@ -83,12 +120,16 @@ export function DataTable({ columns, data }: DataTableProps) {
 
     return (
         <div className="relative">
-            {isFormOpen && (
+            {isFormOpen && selectedPatient && (
                 <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-20">
                     <div className="bg-white p-4 rounded-md shadow-md max-w-lg mx-4 w-full">
-                        <AddPatientForm
-                            onAddPatient={handleAddPatient}
-                            onClose={() => setIsFormOpen(false)}
+                        <AddTestInfoForm
+                            patient={selectedPatient}
+                            onAddTestInfo={handleAddTestInfo}
+                            onClose={() => {
+                                setIsFormOpen(false);
+                                setSelectedPatient(null);
+                            }}
                         />
                     </div>
                 </div>
@@ -108,18 +149,15 @@ export function DataTable({ columns, data }: DataTableProps) {
             <div className="relative z-0">
                 <div className="flex items-center py-4">
                     <Input
-                        placeholder="Tìm theo tên ... "
-                        value={(table.getColumn("hoten")?.getFilterValue() as string) ?? ""}
-                        onChange={(event) =>
-                            table.getColumn("hoten")?.setFilterValue(event.target.value)
-                        }
+                        placeholder="Tìm theo tên ..."
+                        value={searchValue}
+                        onChange={handleSearchChange}
                         className="max-w-sm"
                     />
                     <Button
                         variant="outline"
                         className="ml-2 bg-gray-600 text-white"
                         onClick={() => setIsSearchOptionsVisible(!isSearchOptionsVisible)}
-
                     >
                         Tùy chọn
                     </Button>
@@ -128,15 +166,8 @@ export function DataTable({ columns, data }: DataTableProps) {
                         {table.getFilteredRowModel().rows.length} hàng đã chọn.
                     </div>
                     <div className="flex items-center justify-end space-x-2 py-4 mr-8">
-                        <Button className="bg-gray-600">Nhập file Excel</Button>
-                        <Button className="bg-gray-600">Gửi</Button>
-                        <Button
-                            variant="ghost"
-                            onClick={() => setIsFormOpen(true)}
-                            className="bg-gray-600 text-white"
-                        >
-                            Thêm khách hàng
-                        </Button>
+                        <Button className="bg-gray-600">In danh sách kết quả</Button>
+
                     </div>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -153,7 +184,7 @@ export function DataTable({ columns, data }: DataTableProps) {
                                         key={column.id}
                                         className="capitalize"
                                         checked={column.getIsVisible()}
-                                        onCheckedChange={() => column.toggleVisibility()}
+                                        onCheckedChange={(value) => column.toggleVisibility(!!value)}
                                     >
                                         {column.id}
                                     </DropdownMenuCheckboxItem>
@@ -161,38 +192,45 @@ export function DataTable({ columns, data }: DataTableProps) {
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
-                <Table>
-                    <TableHeader>
-                        {table.getHeaderGroups().map(headerGroup => (
-                            <TableRow key={headerGroup.id}>
-                                {headerGroup.headers.map(header => (
-                                    <TableHead
-                                        key={header.id}
-                                        colSpan={header.colSpan}
+                <div className="rounded-md border">
+                    <Table>
+                        <TableHeader>
+                            {table.getHeaderGroups().map((headerGroup) => (
+                                <TableRow key={headerGroup.id}>
+                                    {headerGroup.headers.map((header) => (
+                                        <TableHead key={header.id}>
+                                            {header.isPlaceholder
+                                                ? null
+                                                : flexRender(header.column.columnDef.header, header.getContext())}
+                                        </TableHead>
+                                    ))}
+                                </TableRow>
+                            ))}
+                        </TableHeader>
+                        <TableBody>
+                            {table.getRowModel().rows.length ? (
+                                table.getRowModel().rows.map((row) => (
+                                    <TableRow
+                                        key={row.id}
+                                        data-state={row.getIsSelected() ? "selected" : undefined}
                                     >
-                                        {header.isPlaceholder
-                                            ? null
-                                            : flexRender(
-                                                header.column.columnDef.header,
-                                                header.getContext()
-                                            )}
-                                    </TableHead>
-                                ))}
-                            </TableRow>
-                        ))}
-                    </TableHeader>
-                    <TableBody>
-                        {table.getRowModel().rows.map(row => (
-                            <TableRow key={row.id}>
-                                {row.getVisibleCells().map(cell => (
-                                    <TableCell key={cell.id}>
-                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                        {row.getVisibleCells().map((cell) => (
+                                            <TableCell key={cell.id}>
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                                        No results.
                                     </TableCell>
-                                ))}
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
         </div>
     );
